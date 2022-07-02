@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'VPC, one private EC2, one public EC2'
+Resources:
+    ## VPC
+    MyVPC:
+        Type: 'AWS::EC2::VPC'
+        Properties:
+            CidrBlock: 10.0.0.0/16
+            Tags:
+            - Key: Environment
+              Value: Test
+            - Key: Name
+              Value: MyVPC
+
+    ## SUBNETS
+    MyPrivateSubnet1:    
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref MyVPC
+            AvailabilityZone: us-east-1a
+            CidrBlock: 10.0.1.0/24
+            Tags: 
+            - Key: Environment
+              Value: Test
+            - Key: Name
+              Value: MyPrivateSubnet1-us-east-1a
+
+    MyPublicSubnet1:    
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref MyVPC
+            AvailabilityZone: us-east-1b
+            CidrBlock: 10.0.2.0/24
+            MapPublicIpOnLaunch: true
+            Tags: 
+            - Key: Environment
+              Value: Test
+            - Key: Name
+              Value: MyPrivateSubnet1-us-east-1b
+
+    ## INTERNET GATEWAY          
+    MyIG:
+        Type: AWS::EC2::InternetGateway
+        Properties:
+            Tags: 
+            - Key: Environment
+              Value: Test
+            - Key: Name
+              Value: MyIG
+
+    MyVPCAttachedIG:
+        Type: AWS::EC2::VPCGatewayAttachment
+        Properties:
+          VpcId: !Ref MyVPC
+          InternetGatewayId: !Ref MyIG
+
+    ## ROUTE TABLE
+    MyPublicRouteTable:
+        Type: AWS::EC2::RouteTable
+        Properties:
+            VpcId: !Ref MyVPC
+            Tags: 
+            - Key: Environment
+              Value: Test
+            - Key: Name
+              Value: MyPublicRouteTable
+
+    MyPublicRoute:
+        Type: AWS::EC2::Route
+        DependsOn: MyVPCAttachedIG
+        Properties:
+            RouteTableId: !Ref MyPublicRouteTable
+            DestinationCidrBlock: 0.0.0.0/0
+            GatewayId: !Ref MyIG
+
+    ## EC2
+    MyEC2Private:
+        Type: AWS::EC2::Instance
+        Properties:
+            InstanceType: t2.micro
+            SubnetId: !Ref MyPrivateSubnet1
+            SecurityGroupIds:
+            - !GetAtt MyPrivateSecurityGroup.GroupId
+            KeyName: awscert
+            ImageId: ami-0cff7528ff583bf9a
+            Tags: 
+            - Key: Environment
+              Value: Test
+            - Key: Name
+              Value: MyEC2Private
+
+    MyPrivateSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupName: MyPrivateSecurityGroup
+            GroupDescription: Enable SSH access via port 22
+            VpcId: !Ref MyVPC
+            SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 0.0.0.0/0
+            Tags: 
+            - Key: Environment
+              Value: Test
+
+    MyEC2Public:
+        Type: AWS::EC2::Instance
+        Properties:
+            InstanceType: t2.micro
+            SubnetId: !Ref MyPublicSubnet1
+            SecurityGroupIds:
+            - !GetAtt MyWebSecurityGroup.GroupId
+            KeyName: awscert
+            ImageId: ami-0cff7528ff583bf9a
+            Tags: 
+            - Key: Environment
+              Value: Test
+            - Key: Name
+              Value: MyEC2Public
+
+    MyWebSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupName: MyWebSecurityGroup
+            GroupDescription: Enable SSH access via port 22, Enable WWW via port 80
+            VpcId: !Ref MyVPC
+            SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 0.0.0.0/0
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 0.0.0.0/0
+            Tags: 
+            - Key: Environment
+              Value: Test
+
+Outputs:
+    InstanceId:
+        Description: InstanceId of the newly created EC2 instance
+        Value: !Ref 'MyEC2Public'
