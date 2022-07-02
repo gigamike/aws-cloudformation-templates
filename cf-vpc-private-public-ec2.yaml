@@ -36,7 +36,7 @@ Resources:
             - Key: Environment
               Value: Test
             - Key: Name
-              Value: MyPrivateSubnet1-us-east-1b
+              Value: MyPublicSubnet1-us-east-1b
 
     ## INTERNET GATEWAY          
     MyIG:
@@ -72,6 +72,12 @@ Resources:
             RouteTableId: !Ref MyPublicRouteTable
             DestinationCidrBlock: 0.0.0.0/0
             GatewayId: !Ref MyIG
+
+    MyPublicRouteAssociateMyPublicSubnet1:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties: 
+            RouteTableId: !Ref MyPublicRouteTable
+            SubnetId: !Ref MyPublicSubnet1
 
     ## EC2
     MyEC2Private:
@@ -139,6 +145,12 @@ Resources:
               Value: Test
 
 Outputs:
-    InstanceId:
-        Description: InstanceId of the newly created EC2 instance
-        Value: !Ref 'MyEC2Public'
+    MyVPCId:
+        Description: InstanceId of MyVPC
+        Value: !Ref MyVPC
+    MyEC2PublicInstanceId:
+        Description: InstanceId of MyEC2Public
+        Value: !Ref MyEC2Public
+    MyEC2PrivateInstanceId:
+        Description: InstanceId of MyEC2Private
+        Value: !Ref MyEC2Private
